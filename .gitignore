@@ -1,0 +1,12 @@
+# Secret files
+.secrets.yaml
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+secrets.*
