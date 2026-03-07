@@ -1,0 +1,27 @@
+window:
+  title_regex: "(135) EL REAL MADRID GANA 1-2 CONTRA EL CELTA - YouTube \u2014 Mozilla\
+    \ Firefox"
+runtime:
+  confidence_threshold: 80
+  dry_run: true
+  cycle_interval_seconds: 1.0
+  llm_max_width: 1024
+  llm_max_height: 1024
+  llm_jpeg_quality: 70
+  max_retries: 2
+  retry_backoff_seconds: 0.5
+provider:
+  name: gemini
+  model: gemini-3.1-flash-lite-preview
+prompt:
+  operator_goal: Observe the target window and return the safest next action.
+debug:
+  enabled: true
+  screenshot_dir: debug_screenshots
+interaction:
+  mouse_speed_multiplier: 1.0
+  enable_variance: true
+hotkeys:
+  start: F8
+  pause: F9
+  stop: F10
