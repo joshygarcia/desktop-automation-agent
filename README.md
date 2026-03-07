@@ -46,8 +46,6 @@ Current runtime support is:
 - `gemini`
 - `openai`
 
-The dependency list includes `anthropic`, but the app does not currently register an Anthropic adapter in the runtime or expose it in the UI.
-
 ## Requirements
 
 - Windows 10 or Windows 11

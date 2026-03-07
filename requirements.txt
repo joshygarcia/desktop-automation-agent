@@ -12,7 +12,6 @@ pywin32
 pydirectinput
 pynput
 openai
-anthropic
 google-genai
 instructor
 opencv-python
