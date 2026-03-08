@@ -508,7 +508,6 @@ class MainWindow(QMainWindow):
             self.window_selector.itemText(index),
             self.window_selector.itemData(index),
         )
-        self.mark_settings_dirty()
 
     def update_validation_state(self) -> None:
         model_error = ""

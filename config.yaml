@@ -1,6 +1,5 @@
 window:
-  title_regex: "(135) EL REAL MADRID GANA 1-2 CONTRA EL CELTA - YouTube \u2014 Mozilla\
-    \ Firefox"
+  title_regex: C:\WINDOWS\system32\cmd.exe
 runtime:
   confidence_threshold: 80
   dry_run: true

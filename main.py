@@ -99,6 +99,38 @@ def import_settings_profile(profile_path: Path) -> AppSettings:
     return load_settings(profile_path)
 
 
+def apply_form_values_to_settings(
+    settings: AppSettings,
+    *,
+    window_title: str,
+    provider_name: str,
+    provider_model: str,
+    confidence_threshold: int,
+    cycle_interval_seconds: float,
+    max_retries: int,
+    retry_backoff_seconds: float,
+    llm_max_width: int,
+    llm_max_height: int,
+    llm_jpeg_quality: int,
+    dry_run: bool,
+    operator_goal: str,
+    persist_window_title: bool = False,
+) -> None:
+    if persist_window_title:
+        settings.window.title_regex = window_title
+    settings.provider.name = provider_name
+    settings.provider.model = provider_model
+    settings.runtime.confidence_threshold = confidence_threshold
+    settings.runtime.cycle_interval_seconds = cycle_interval_seconds
+    settings.runtime.max_retries = max_retries
+    settings.runtime.retry_backoff_seconds = retry_backoff_seconds
+    settings.runtime.llm_max_width = llm_max_width
+    settings.runtime.llm_max_height = llm_max_height
+    settings.runtime.llm_jpeg_quality = llm_jpeg_quality
+    settings.runtime.dry_run = dry_run
+    settings.prompt.operator_goal = operator_goal
+
+
 def apply_settings_to_window(window: MainWindow, settings: AppSettings) -> None:
     window.provider_selector.setCurrentText(settings.provider.name)
     window.model_input.setText(settings.provider.model)
@@ -251,18 +283,21 @@ def build_main_window(
     runtime_connection_runner = connection_runner
 
     def collect_form_settings() -> None:
-        settings.window.title_regex = window.window_selector.currentText()
-        settings.provider.name = window.provider_selector.currentText()
-        settings.provider.model = window.model_input.text()
-        settings.runtime.confidence_threshold = window.confidence_spinbox.value()
-        settings.runtime.cycle_interval_seconds = window.cycle_interval_spinbox.value()
-        settings.runtime.max_retries = window.retry_spinbox.value()
-        settings.runtime.retry_backoff_seconds = window.backoff_spinbox.value()
-        settings.runtime.llm_max_width = window.llm_max_width_spinbox.value()
-        settings.runtime.llm_max_height = window.llm_max_height_spinbox.value()
-        settings.runtime.llm_jpeg_quality = window.llm_jpeg_quality_spinbox.value()
-        settings.runtime.dry_run = window.dry_run_checkbox.isChecked()
-        settings.prompt.operator_goal = window.operator_goal_input.text()
+        apply_form_values_to_settings(
+            settings,
+            window_title=window.window_selector.currentText(),
+            provider_name=window.provider_selector.currentText(),
+            provider_model=window.model_input.text(),
+            confidence_threshold=window.confidence_spinbox.value(),
+            cycle_interval_seconds=window.cycle_interval_spinbox.value(),
+            max_retries=window.retry_spinbox.value(),
+            retry_backoff_seconds=window.backoff_spinbox.value(),
+            llm_max_width=window.llm_max_width_spinbox.value(),
+            llm_max_height=window.llm_max_height_spinbox.value(),
+            llm_jpeg_quality=window.llm_jpeg_quality_spinbox.value(),
+            dry_run=window.dry_run_checkbox.isChecked(),
+            operator_goal=window.operator_goal_input.text(),
+        )
 
     def choose_export_profile_path() -> Path | None:
         if export_profile_picker is not None:
