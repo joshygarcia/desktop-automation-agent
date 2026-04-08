@@ -1,106 +1,171 @@
+<div align="center">
+
 # Desktop Automation Agent
 
-Windows desktop automation agent with a native PySide6 control panel, screenshot-driven LLM decisions, and a dry-run-first execution model.
+**An AI-powered Windows desktop automation tool that sees your screen and acts on it.**
 
-## Current App State
+Give it a goal, point it at a window, and watch it work.
 
-This repository is no longer just an MVP shell. The current app can:
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776ab?logo=python&logoColor=white)](https://python.org)
+[![PySide6](https://img.shields.io/badge/UI-PySide6-41cd52?logo=qt&logoColor=white)](https://doc.qt.io/qtforpython-6/)
+[![Gemini](https://img.shields.io/badge/Provider-Gemini-4285f4?logo=google&logoColor=white)](#supported-providers)
+[![OpenAI](https://img.shields.io/badge/Provider-OpenAI-412991?logo=openai&logoColor=white)](#supported-providers)
+[![Windows](https://img.shields.io/badge/Platform-Windows-0078d4?logo=windows&logoColor=white)](#requirements)
 
-- launch a native desktop control panel
-- enumerate visible desktop windows and pin a target window by title and `HWND`
-- capture the target window client area with `PrintWindow`, with `mss` fallback
-- send the current frame to Gemini or OpenAI for the next-step decision
-- execute `click`, `double_click`, `drag`, `type_text`, and `press_hotkey` actions
-- run in dry-run mode so decisions are visible without injecting input
-- test provider connectivity from the UI
-- save config changes to `config.yaml` and API keys to `.secrets.yaml`
-- import and export non-secret settings profiles
-- register global start, pause, and stop hotkeys
-- track task completion confidence and stop automatically when the model marks the goal complete with enough confidence
+</div>
 
-## What The App Does
+---
 
-Each cycle looks like this:
+## How It Works
 
-1. The app finds the selected window.
-2. It captures the visible client area.
-3. It resizes and compresses the image for provider cost/performance control.
-4. It asks the selected model for the safest next action in a strict JSON schema.
-5. It validates the model response.
-6. It either logs the result in dry-run mode or activates the target window and performs the action live.
+The agent runs in a continuous loop, using vision-language models to decide what to do next:
 
-The control panel shows:
+```
+                        +------------------+
+                        |  Pick a Window   |
+                        +--------+---------+
+                                 |
+                                 v
+                     +-----------+-----------+
+                     |  Capture Screenshot   |
+                     +-----------+-----------+
+                                 |
+                                 v
+                     +-----------+-----------+
+                     | Resize & Compress for |
+                     |    LLM Efficiency     |
+                     +-----------+-----------+
+                                 |
+                                 v
+                     +-----------+-----------+
+                     |  Send to Gemini or    |
+                     |  OpenAI for Analysis  |
+                     +-----------+-----------+
+                                 |
+                                 v
+                     +-----------+-----------+
+                     | Model Returns Action  |
+                     |  (click, type, drag)  |
+                     +-----------+-----------+
+                                 |
+                        +--------+--------+
+                        |                 |
+                        v                 v
+                  +-----------+    +-----------+
+                  |  Dry Run  |    |   Live    |
+                  |  (log it) |    | (do it!)  |
+                  +-----------+    +-----------+
+                                         |
+                                         v
+                              +----------+----------+
+                              | Track Confidence &  |
+                              | Auto-Stop on Goal   |
+                              +---------------------+
+```
 
-- current runtime state
-- latest screenshot preview
-- last action, confidence, and reason
-- pinned `HWND`
-- execution result details
-- inferred goal and completion trend
-- recent logs and error details
+Each cycle, the model receives the current screenshot and returns a structured JSON response with the action type, coordinates, confidence score, and reasoning. The agent validates the response, checks confidence thresholds, and either logs it (dry run) or executes it (live mode).
+
+---
+
+## Screenshots
+
+### Control Tab
+
+The main interface where you monitor and control the automation.
+
+<div align="center">
+<img src="docs/images/control-tab.png" alt="Control Tab" width="550">
+</div>
+
+- **Status badges** -- see the current state (`Idle`, `Running`, `Paused`) and mode (`Dry Run` / `Live`) at a glance
+- **Task Instructions** -- describe what you want the agent to accomplish
+- **Screenshot preview** -- live view of what the model sees each cycle
+- **Collapsible details** -- expand to see confidence scores, action reasoning, errors, inferred goals, and completion trends
+
+### Settings Tab
+
+Configure providers, tune performance, and manage settings profiles.
+
+<div align="center">
+<img src="docs/images/settings-tab.png" alt="Settings Tab" width="550">
+</div>
+
+- **Provider selection** -- switch between Gemini and OpenAI with one click
+- **API key management** -- keys are masked and stored separately in `.secrets.yaml`
+- **Test Connection** -- validate your provider credentials before running
+- **Runtime tuning** -- adjust confidence threshold, cycle interval, retries, backoff, and image sizing
+- **Profile import/export** -- share non-secret settings across machines
+
+---
+
+## Features
+
+### Vision-Driven Automation
+The agent captures the target window, sends the screenshot to a vision-language model, and receives structured action decisions. No element selectors, no brittle scripts -- it works with any application the same way a human would.
+
+### Supported Actions
+| Action | Description |
+|--------|-------------|
+| `click` | Left-click at a specific location |
+| `double_click` | Double-click at a specific location |
+| `drag` | Click and drag from one point to another |
+| `type_text` | Type text into the focused input |
+| `press_hotkey` | Press keyboard combinations (e.g. `Ctrl+A`) |
+| `wait` | Do nothing (page loading, animations) |
+
+Coordinates use a normalized `0-1000` scale and are converted to absolute window coordinates at execution time.
+
+### Safety First
+
+- **Dry-run mode** -- see exactly what the model wants to do before enabling live execution
+- **Confidence threshold** -- actions below the threshold are blocked automatically (default: 80%)
+- **Coordinate bounds checking** -- clicks and drags are constrained to the target window area
+- **Stagnation recovery** -- detects repeated actions and nudges the model toward alternatives
+- **Auto-completion** -- the model tracks task progress and stops when the goal is met
+
+### Global Hotkeys
+
+| Hotkey | Action |
+|--------|--------|
+| `F8` | Start / Resume |
+| `F9` | Pause |
+| `F10` | Stop |
+
+Configurable in `config.yaml` under the `hotkeys` section.
+
+---
 
 ## Supported Providers
 
-Current runtime support is:
+| Provider | Default Model | Status |
+|----------|---------------|--------|
+| Gemini | `gemini-3.1-flash-lite-preview` | Supported |
+| OpenAI | `gpt-4.1-mini` | Supported |
 
-- `gemini`
-- `openai`
+Both providers support vision-based analysis. Choose your provider and model in the Settings tab or via CLI flags.
+
+---
 
 ## Requirements
 
-- Windows 10 or Windows 11
-- Python 3.11+
-- a visible target application window
-- an API key for Gemini or OpenAI
+- **Windows 10 or 11**
+- **Python 3.11+**
+- A visible target application window (minimized windows are not supported)
+- An API key for [Gemini](https://ai.google.dev/) or [OpenAI](https://platform.openai.com/)
 
-Notes:
+---
 
-- The app is Windows-specific. It depends on `pywin32`, `pygetwindow`, `pydirectinput`, and global hotkeys.
-- Minimized windows are not supported. The capture layer attempts to restore minimized windows, but automation should be run against a normal visible window.
+## Quick Start
 
-## Install
+### 1. Install dependencies
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-## Configuration Files
+### 2. Add your API key
 
-### `config.yaml`
-
-Committed app settings live in `config.yaml`.
-
-Current sections:
-
-- `window`
-- `runtime`
-- `provider`
-- `prompt`
-- `debug`
-- `interaction`
-- `hotkeys`
-
-Important active fields:
-
-- `window.title_regex`
-- `runtime.confidence_threshold`
-- `runtime.dry_run`
-- `runtime.cycle_interval_seconds`
-- `runtime.llm_max_width`
-- `runtime.llm_max_height`
-- `runtime.llm_jpeg_quality`
-- `runtime.max_retries`
-- `runtime.retry_backoff_seconds`
-- `provider.name`
-- `provider.model`
-- `prompt.operator_goal`
-- `hotkeys.start`
-- `hotkeys.pause`
-- `hotkeys.stop`
-
-### `.secrets.yaml`
-
-Provider API keys are loaded from a separate `.secrets.yaml` next to `config.yaml`.
+Create a `.secrets.yaml` file in the project root:
 
 ```yaml
 provider:
@@ -108,120 +173,159 @@ provider:
   gemini_api_key: "your-key-here"
 ```
 
-`config.yaml` is safe to commit. `.secrets.yaml` should stay local.
-
-## Running The App
-
-Start the native panel:
+### 3. Launch the app
 
 ```powershell
 python main.py
 ```
 
-Useful overrides:
-
-```powershell
-python main.py --provider gemini --dry-run --window-title-regex "Calculator"
-```
-
-Available CLI options:
-
-- `--provider`
-- `--dry-run`
-- `--window-title-regex`
-- `--config`
-
-There is also a Windows launcher:
+Or use the batch launcher:
 
 ```powershell
 .\launch-desktop-automation-agent.bat
 ```
 
-## Using The UI
+### 4. Run your first automation
 
-### Control Tab
+1. Pick a simple target window (Calculator, Notepad, etc.)
+2. Keep **Dry Run** enabled
+3. Enter a short goal like `"Type Hello World in Notepad"`
+4. Click **Start/Resume** and watch the preview, reasoning, and result fields
+5. Only switch to live mode after the dry-run output looks correct
 
-Use the Control tab to:
+### CLI Options
 
-- pick the target window
-- enter the task instruction / operator goal
-- start, pause, or stop the runtime
-- inspect the latest screenshot preview
-- review action reasoning, errors, and logs
+```powershell
+python main.py --provider gemini --dry-run --window-title-regex "Calculator"
+```
 
-### Settings Tab
+| Flag | Description |
+|------|-------------|
+| `--provider` | `gemini` or `openai` |
+| `--dry-run` | Start in dry-run mode |
+| `--window-title-regex` | Target window title pattern |
+| `--config` | Path to config file |
 
-Use the Settings tab to:
+---
 
-- choose `gemini` or `openai`
-- set the model name
-- enter provider API keys
-- test provider connectivity
-- tune confidence, interval, retries, backoff, and image sizing
-- save and reset local settings
-- import and export settings profiles
+## Configuration
 
-Profile import/export is non-secret by design. API keys are preserved separately in `.secrets.yaml`.
+### `config.yaml` -- App Settings (safe to commit)
 
-## Runtime Safety
+```yaml
+window:
+  title_regex: "Notepad"          # Target window pattern
 
-Recommended operating pattern:
+runtime:
+  confidence_threshold: 80        # Min confidence to execute (0-100)
+  dry_run: true                   # Start in dry-run mode
+  cycle_interval_seconds: 1.0     # Seconds between cycles
+  llm_max_width: 1024             # Screenshot resize for LLM
+  llm_max_height: 1024
+  llm_jpeg_quality: 70            # JPEG compression (30-95)
+  max_retries: 2                  # Provider call retries
+  retry_backoff_seconds: 0.5
 
-1. Start in dry-run mode.
-2. Confirm the selected window and screenshot preview are correct.
-3. Verify the model is producing reasonable actions and reasons.
-4. Switch to live mode only for non-critical apps.
+provider:
+  name: gemini
+  model: gemini-3.1-flash-lite-preview
 
-Live execution behavior today:
+prompt:
+  operator_goal: "Observe the target window..."
 
-- the app tries to bring the target window to the foreground before input injection
-- clicks and drags are bounded to the captured window area
-- low-confidence decisions are not executed
-- repeated `wait` decisions can trigger recovery prompts
-- repeated stalled actions can push the model toward a safer alternative or a hotkey-based recovery step
+hotkeys:
+  start: F8
+  pause: F9
+  stop: F10
+```
 
-## Action Schema
+### `.secrets.yaml` -- API Keys (git-ignored)
 
-The model is currently expected to return one of:
+```yaml
+provider:
+  openai_api_key: "sk-..."
+  gemini_api_key: "your-key-here"
+```
 
-- `wait`
-- `click`
-- `double_click`
-- `drag`
-- `type_text`
-- `press_hotkey`
-
-Pointer coordinates use a normalized `0-1000` scale in the model response and are converted into absolute window coordinates at execution time.
-
-## Known Limitations
-
-- The app is Windows-only.
-- The UI currently supports only Gemini and OpenAI.
-- `vision/element_detector.py` is still a placeholder seam, not an active detection system.
-- `debug.enabled` and `debug.screenshot_dir` exist in config, but automatic debug artifact writing is not fully wired into the runtime yet.
-- `interaction.mouse_speed_multiplier` and `interaction.enable_variance` exist in config, but they are not currently plumbed through as user-tunable runtime behavior.
-- The `tests/` tree is present, but the committed test files are empty placeholders right now, so `pytest` currently collects `0` tests in this repo state.
+---
 
 ## Project Layout
 
-```text
-actions/       Input execution and window activation
-capture/       Window discovery and screenshot capture
-interaction/   Mouse pathing, timing, hotkeys, variance helpers
-llm/           Provider adapters, prompts, response normalization
-ui/            PySide6 window, controller, and view models
-vision/        Future vision helper seam
-agent.py       Main cycle orchestration
-main.py        CLI entry point and app bootstrap
-settings.py    Typed configuration models
+```
+desktop-automation-agent/
+|
++-- main.py                  # CLI entry point and app bootstrap
++-- agent.py                 # Main cycle orchestration
++-- settings.py              # Typed configuration models (Pydantic)
+|
++-- actions/
+|   +-- executor.py          # Action execution, coordinate translation
+|
++-- capture/
+|   +-- window_capture.py    # Window discovery, screenshot capture
+|
++-- llm/
+|   +-- client.py            # Provider adapters (OpenAI, Gemini)
+|   +-- prompts.py           # System + user message construction
+|   +-- response_models.py   # Decision schema (Pydantic)
+|
++-- interaction/
+|   +-- hotkeys.py           # Global hotkey listener
+|   +-- mouse_dynamics.py    # Mouse path interpolation + jitter
+|   +-- timing_engine.py     # Input timing delays
+|   +-- variance_injector.py # Human-like input variance
+|
++-- ui/
+|   +-- main_window.py       # PySide6 main window (Control + Settings tabs)
+|   +-- controller.py        # Runtime state management + scheduler
+|   +-- view_models.py       # UI state data binding
+|
++-- vision/
+|   +-- element_detector.py  # Future vision helper seam
+|
++-- config.yaml              # Default app settings
++-- .secrets.yaml             # API keys (git-ignored)
++-- requirements.txt          # Python dependencies
 ```
 
-## Recommended First Run
+---
 
-1. Put an API key in `.secrets.yaml`.
-2. Launch the app with `python main.py`.
-3. Pick a simple target window such as Calculator or Notepad.
-4. Keep Dry Run enabled.
-5. Enter a short goal.
-6. Click Start/Resume and watch the preview, reasoning, and result fields.
-7. Only test live mode after the dry-run output looks correct.
+## Architecture
+
+```
+User clicks Start
+        |
+        v
+  RuntimeController          manages state (idle/running/paused)
+        |                    schedules cycles via Qt timer
+        v
+  DesktopAutomationAgent     orchestrates one capture-analyze-execute cycle
+        |
+   +----+----+--------+
+   |         |         |
+   v         v         v
+Capture    LLM       Execute
+   |         |         |
+   v         v         v
+WindowCapture  LlmClient  ActionExecutor
+(PrintWindow   (Gemini/    (pydirectinput
+ + mss)        OpenAI)     + pywin32)
+```
+
+The capture layer tries `PrintWindow` first and falls back to `mss` if the frame is blank. The LLM client normalizes responses across providers and validates against a strict JSON schema. The executor translates normalized coordinates to absolute window positions before injecting input.
+
+---
+
+## Known Limitations
+
+- **Windows-only** -- depends on `pywin32`, `pydirectinput`, and `pynput`
+- **Minimized windows** -- not supported; the target must be a visible, normal window
+- **Two providers** -- UI supports Gemini and OpenAI only
+- **No element detection** -- `vision/element_detector.py` is a placeholder for future work
+- **Tests** -- test files exist but are empty placeholders
+
+---
+
+## License
+
+This project is for personal and educational use.
